@@ -96,4 +96,16 @@ class AuthController extends Controller
             'user' => $request->user(),
         ]);
     }
+
+    /**
+     * Get list of all active users (for purchaser selection).
+     */
+    public function getUsers(): JsonResponse
+    {
+        $users = User::select('id', 'name', 'email')->get();
+
+        return response()->json([
+            'data' => $users,
+        ]);
+    }
 }

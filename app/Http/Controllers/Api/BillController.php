@@ -86,11 +86,17 @@ class BillController extends Controller
                 $totalPrice = round($qty * $unitPrice, 2);
                 $subtotal += $totalPrice;
 
+                // 1. Bill Line Item Save Karein
                 $bill->items()->create([
                     'item_id' => $itemModel->id,
                     'quantity' => $qty,
                     'unit_price' => $unitPrice,
                     'total_price' => $totalPrice,
+                ]);
+
+                // 2. Catalog Item Price Auto-Update Karein (Naye Rate Par)
+                $itemModel->update([
+                    'current_price' => $unitPrice,
                 ]);
             }
 
@@ -159,11 +165,17 @@ class BillController extends Controller
                     $totalPrice = round($qty * $unitPrice, 2);
                     $subtotal += $totalPrice;
 
+                    // 1. Re-create Bill Line Item
                     $bill->items()->create([
                         'item_id' => $itemModel->id,
                         'quantity' => $qty,
                         'unit_price' => $unitPrice,
                         'total_price' => $totalPrice,
+                    ]);
+
+                    // 2. Catalog Item Price Auto-Update Karein
+                    $itemModel->update([
+                        'current_price' => $unitPrice,
                     ]);
                 }
 
