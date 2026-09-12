@@ -12,6 +12,11 @@ class BillResource extends JsonResource
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
+            'user' => $this->user ? [
+                'id' => $this->user->id,
+                'name' => $this->user->name,
+                'email' => $this->user->email,
+            ] : null,
             'vendor_id' => $this->vendor_id,
             'vendor' => new VendorResource($this->whenLoaded('vendor')),
             'bill_number' => $this->bill_number,

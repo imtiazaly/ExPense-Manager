@@ -14,30 +14,42 @@ use Illuminate\Support\Facades\DB;
 class BillController extends Controller
 {
     /**
-     * Display a listing of bills for authenticated user (with filters).
+     * Display a listing of bills for authenticated user (with advanced 5-way filters).
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = $request->user()->bills()->with(['vendor', 'items.item']);
+        $query = $request->user()->bills()->with(['user', 'vendor', 'items.item']);
 
-        if ($request->filled('status')) {
+        // 1. Status Filter
+        if ($request->filled('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
         }
 
+        // 2. Vendor Filter
         if ($request->filled('vendor_id')) {
             $query->where('vendor_id', $request->vendor_id);
         }
 
+        // 3. Purchaser (User) Filter
+        if ($request->filled('purchaser_id')) {
+            $query->where('user_id', $request->purchaser_id);
+        }
+
+        // 4. Text Search Filter (Bill #, Vendor Name, Purchaser Name)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('bill_number', 'like', "%{$search}%")
                     ->orWhereHas('vendor', function ($vq) use ($search) {
                         $vq->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%");
                     });
             });
         }
 
+        // 5. Date Range Filters (Daily, Weekly, Monthly, Custom)
         if ($request->filled('from_date')) {
             $query->whereDate('bill_date', '>=', $request->from_date);
         }
@@ -46,7 +58,7 @@ class BillController extends Controller
             $query->whereDate('bill_date', '<=', $request->to_date);
         }
 
-        $bills = $query->latest('bill_date')->paginate($request->integer('per_page', 15));
+        $bills = $query->latest('bill_date')->paginate($request->integer('per_page', 20));
 
         return BillResource::collection($bills);
     }
