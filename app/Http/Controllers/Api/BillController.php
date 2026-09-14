@@ -69,6 +69,7 @@ class BillController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
+            'purchaser_id' => ['required', 'exists:users,id'], // <-- Strictly Required Registered User ID
             'vendor_id' => ['required', 'exists:vendors,id'],
             'bill_number' => ['required', 'string', 'max:255'],
             'bill_date' => ['required', 'date'],
@@ -79,8 +80,10 @@ class BillController extends Controller
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $bill = DB::transaction(function () use ($request, $validated) {
-            $bill = $request->user()->bills()->create([
+        $bill = DB::transaction(function () use ($validated) {
+            // Main Bill Creation with Foreign Key user_id
+            $bill = Bill::create([
+                'user_id' => $validated['purchaser_id'],
                 'vendor_id' => $validated['vendor_id'],
                 'bill_number' => $validated['bill_number'],
                 'bill_date' => $validated['bill_date'],
@@ -98,7 +101,7 @@ class BillController extends Controller
                 $totalPrice = round($qty * $unitPrice, 2);
                 $subtotal += $totalPrice;
 
-                // 1. Bill Line Item Save Karein
+                // 1. Line Item Save
                 $bill->items()->create([
                     'item_id' => $itemModel->id,
                     'quantity' => $qty,
@@ -106,7 +109,7 @@ class BillController extends Controller
                     'total_price' => $totalPrice,
                 ]);
 
-                // 2. Catalog Item Price Auto-Update Karein (Naye Rate Par)
+                // 2. Catalog Item Price Auto-Update
                 $itemModel->update([
                     'current_price' => $unitPrice,
                 ]);
@@ -120,11 +123,10 @@ class BillController extends Controller
             return $bill;
         });
 
-        return (new BillResource($bill->load(['vendor', 'items.item'])))
+        return (new BillResource($bill->load(['user', 'vendor', 'items.item'])))
             ->response()
             ->setStatusCode(201);
     }
-
     /**
      * Display the specified bill details.
      */
